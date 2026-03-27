@@ -9,7 +9,7 @@ export interface ClassifyConfig {
 }
 
 export interface Classification {
-  category: "person" | "project" | "idea" | "task";
+  category: "person" | "project" | "idea" | "task" | "rating" | "learning" | "research" | "work_session" | "decision";
   confidence: number;
   title: string;
   summary: string;
@@ -32,10 +32,15 @@ Categories:
 - project: A project, initiative, or ongoing effort with next actions
 - idea: A thought, insight, concept, or creative spark
 - task: A specific actionable item with a clear done state
+- rating: A rating, review, or evaluation of something (1-10 scale, product review, experience rating)
+- learning: A lesson learned, insight gained from experience, or knowledge acquired
+- research: Research findings, collected data, analysis results, or reference material
+- work_session: A log of work done — what was accomplished, blockers, next steps
+- decision: A decision made with rationale — what was chosen, why, what was rejected
 
 Respond with ONLY valid JSON (no markdown, no explanation):
 {
-  "category": "person|project|idea|task",
+  "category": "person|project|idea|task|rating|learning|research|work_session|decision",
   "confidence": 0.0-1.0,
   "title": "Short descriptive title (max 80 chars)",
   "summary": "1-2 sentence summary",
@@ -48,6 +53,11 @@ Metadata by category:
 - project: { "next_action": "immediate next step", "due_date": null, "area": "life area" }
 - idea: { "oneliner": "elevator pitch", "elaboration": "expanded thinking", "potential": "low|medium|high" }
 - task: { "next_action": "what to do", "due_date": null, "effort": "small|medium|large" }
+- rating: { "subject": "what is being rated", "score": null, "criteria": "what was evaluated" }
+- learning: { "source": "where this was learned", "applies_to": "relevant domain", "confidence": "how certain" }
+- research: { "topic": "research subject", "sources": [], "status": "in-progress|complete" }
+- work_session: { "duration": null, "blockers": [], "next_steps": [] }
+- decision: { "options_considered": [], "chosen": "selected option", "rationale": "why this was chosen" }
 
 Be conservative with confidence. Use < 0.7 when:
 - The text is ambiguous between categories
@@ -57,7 +67,7 @@ Be conservative with confidence. Use < 0.7 when:
 const JSON_SCHEMA = {
   type: "object",
   properties: {
-    category: { type: "string", enum: ["person", "project", "idea", "task"] },
+    category: { type: "string", enum: ["person", "project", "idea", "task", "rating", "learning", "research", "work_session", "decision"] },
     confidence: { type: "number" },
     title: { type: "string" },
     summary: { type: "string" },
@@ -86,7 +96,7 @@ export async function classify(
       body: JSON.stringify({
         model: config.model,
         system: SYSTEM_PROMPT,
-        prompt: `<capture>\n${rawText}\n</capture>`,
+        prompt: `<capture>\n${rawText.replace(/<\/capture>/gi, "&lt;/capture&gt;")}\n</capture>`,
         format: JSON_SCHEMA,
         stream: false,
         options: { temperature: 0 },
@@ -121,7 +131,7 @@ export async function classify(
     const parsed = JSON.parse(text) as Record<string, unknown>;
 
     // Validate required fields
-    const validCategories = ["person", "project", "idea", "task"];
+    const validCategories = ["person", "project", "idea", "task", "rating", "learning", "research", "work_session", "decision"];
     if (!validCategories.includes(parsed.category as string)) {
       log.error("Invalid category", { category: parsed.category });
       return { classification: null, retryable: false, error: "invalid_category" };

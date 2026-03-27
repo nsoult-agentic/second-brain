@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine
+FROM oven/bun:1.3.10-alpine
 
 WORKDIR /app
 
@@ -12,5 +12,8 @@ COPY tsconfig.json ./
 USER bun
 
 EXPOSE 9098
+
+# Auto-link ghcr.io package to repo
+LABEL org.opencontainers.image.source=https://github.com/nsoult-agentic/second-brain
 
 CMD ["bun", "run", "src/index.ts"]

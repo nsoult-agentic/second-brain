@@ -4,7 +4,7 @@
 #
 # Required env vars (set via .env or Portainer):
 #   OLLAMA_URL         — Ollama HTTP endpoint for classify + embed
-#   NTFY_URL           — ntfy server URL for notifications
+# ntfy runs on the same host — accessed via host.docker.internal:2586
 
 services:
   postgres:
@@ -81,7 +81,7 @@ services:
       OLLAMA_CLASSIFY_MODEL: hermes3:8b
       OLLAMA_EMBED_MODEL: nomic-embed-text
       MATRIX_SECRET_FILE: /secrets/matrix.json
-      NTFY_URL: ${NTFY_URL}
+      NTFY_URL: http://host.docker.internal:2586
       NTFY_TOPIC: second-brain
       NTFY_TOKEN_FILE: /secrets/ntfy-token  # Read by envOrFile() in config.ts
       HEALTH_PORT: "9098"

@@ -12,7 +12,7 @@
 
 services:
   capture:
-    image: ghcr.io/nsoult-agentic/second-brain:latest
+    image: ghcr.io/nsoult-agentic/second-brain:sha-4879a26
     container_name: second-brain-capture
     restart: unless-stopped
 

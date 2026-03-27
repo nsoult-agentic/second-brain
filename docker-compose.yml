@@ -31,7 +31,7 @@ services:
           memory: 256M
 
   capture:
-    image: ghcr.io/nsoult-agentic/second-brain:sha-4879a26
+    image: ghcr.io/nsoult-agentic/second-brain:sha-8ff31e6
     container_name: second-brain-capture
     restart: unless-stopped
     depends_on:

@@ -18,6 +18,8 @@ services:
       - /srv/second-brain/init:/docker-entrypoint-initdb.d:ro
       - /srv/second-brain/backups:/backups
       - /etc/localtime:/etc/localtime:ro
+    networks:
+      - brain
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pai -d second_brain"]
       interval: 10s
@@ -39,6 +41,8 @@ services:
         condition: service_healthy
 
     # -- Network --
+    networks:
+      - brain
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -87,3 +91,8 @@ services:
       HEALTH_PORT: "9098"
       LOG_LEVEL: info
       # NEVER put passwords here — read from /secrets/
+
+networks:
+  brain:
+    external: true
+    name: second-brain

@@ -38,6 +38,10 @@ services:
       postgres:
         condition: service_healthy
 
+    # -- Network --
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     # -- Security Hardening --
     read_only: true
     security_opt:
@@ -78,6 +82,8 @@ services:
       OLLAMA_EMBED_MODEL: nomic-embed-text
       MATRIX_SECRET_FILE: /secrets/matrix.json
       NTFY_URL: ${NTFY_URL}
+      NTFY_TOPIC: second-brain
+      NTFY_TOKEN_FILE: /secrets/ntfy-token  # Read by envOrFile() in config.ts
       HEALTH_PORT: "9098"
       LOG_LEVEL: info
       # NEVER put passwords here — read from /secrets/

@@ -100,7 +100,7 @@ export function loadConfig(): Config {
     ntfy: {
       url: env("NTFY_URL"),
       topic: env("NTFY_TOPIC", "second-brain"),
-      token: env("NTFY_TOKEN", ""),
+      token: envOrFile("NTFY_TOKEN", ""),
     },
 
     healthPort: parseInt(env("HEALTH_PORT", "9098"), 10),

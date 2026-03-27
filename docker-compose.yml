@@ -1,24 +1,48 @@
-# docker-compose.yml for second-brain capture service
+# Second Brain — PostgreSQL + pgvector + Capture Service
 # Deploy: Portainer -> Stacks -> Add from Repository -> GitOps polling
-# CI/CD: GitHub Actions builds image on push, updates this tag automatically
+# CI/CD: GitHub Actions builds capture image on push, updates tag automatically
 #
-# SECURITY: This file was generated following PAI hardened container policy.
-# Do NOT add: docker.sock mounts, privileged mode, host network/PID,
-# extra capabilities, or secrets in environment variables.
-#
-# Required env vars (set in Portainer stack):
-#   OLLAMA_URL         — Ollama HTTP endpoint (classify + embed)
+# Required env vars (set via .env or Portainer):
+#   POSTGRES_PASSWORD  — PostgreSQL admin password
+#   OLLAMA_URL         — Ollama HTTP endpoint for classify + embed
 #   NTFY_URL           — ntfy server URL for notifications
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: second-brain-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /srv/second-brain/postgres:/var/lib/postgresql/data
+      - /srv/second-brain/init:/docker-entrypoint-initdb.d:ro
+      - /srv/second-brain/backups:/backups
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      POSTGRES_DB: second_brain
+      POSTGRES_USER: pai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: America/Los_Angeles
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pai -d second_brain"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
   capture:
     image: ghcr.io/nsoult-agentic/second-brain:sha-4879a26
     container_name: second-brain-capture
     restart: unless-stopped
-
-    # -- Network --
-    networks:
-      - second-brain
+    depends_on:
+      postgres:
+        condition: service_healthy
 
     # -- Security Hardening --
     read_only: true
@@ -50,22 +74,16 @@ services:
 
     # -- Environment --
     environment:
-      - NODE_ENV=production
-      - DB_HOST=second-brain-db
-      - DB_PORT=5432
-      - DB_NAME=second_brain
-      - DB_USER=capture_writer
-      - DB_PASSWORD_FILE=/secrets/db-password
-      - OLLAMA_URL=${OLLAMA_URL}
-      - OLLAMA_CLASSIFY_MODEL=hermes3:8b
-      - OLLAMA_EMBED_MODEL=nomic-embed-text
-      - MATRIX_SECRET_FILE=/secrets/matrix.json
-      - NTFY_URL=${NTFY_URL}
-      - HEALTH_PORT=9098
-      - LOG_LEVEL=info
+      DB_HOST: second-brain-db
+      DB_PORT: "5432"
+      DB_NAME: second_brain
+      DB_USER: capture_writer
+      DB_PASSWORD_FILE: /secrets/db-password
+      OLLAMA_URL: ${OLLAMA_URL}
+      OLLAMA_CLASSIFY_MODEL: hermes3:8b
+      OLLAMA_EMBED_MODEL: nomic-embed-text
+      MATRIX_SECRET_FILE: /secrets/matrix.json
+      NTFY_URL: ${NTFY_URL}
+      HEALTH_PORT: "9098"
+      LOG_LEVEL: info
       # NEVER put passwords here — read from /secrets/
-
-networks:
-  second-brain:
-    external: true
-    name: second-brain_default

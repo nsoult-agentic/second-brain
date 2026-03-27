@@ -1,0 +1,71 @@
+# docker-compose.yml for second-brain capture service
+# Deploy: Portainer -> Stacks -> Add from Repository -> GitOps polling
+# CI/CD: GitHub Actions builds image on push, updates this tag automatically
+#
+# SECURITY: This file was generated following PAI hardened container policy.
+# Do NOT add: docker.sock mounts, privileged mode, host network/PID,
+# extra capabilities, or secrets in environment variables.
+#
+# Required env vars (set in Portainer stack):
+#   OLLAMA_URL         — Ollama HTTP endpoint (classify + embed)
+#   NTFY_URL           — ntfy server URL for notifications
+
+services:
+  capture:
+    image: ghcr.io/nsoult-agentic/second-brain:latest
+    container_name: second-brain-capture
+    restart: unless-stopped
+
+    # -- Network --
+    networks:
+      - second-brain
+
+    # -- Security Hardening --
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # -- Resource Limits --
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+
+    # -- Filesystem --
+    volumes:
+      - /srv/second-brain-capture/secrets:/secrets:ro
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+
+    # -- Health Check --
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:9098/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    # -- Environment --
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=second-brain-db
+      - DB_PORT=5432
+      - DB_NAME=second_brain
+      - DB_USER=capture_writer
+      - DB_PASSWORD_FILE=/secrets/db-password
+      - OLLAMA_URL=${OLLAMA_URL}
+      - OLLAMA_CLASSIFY_MODEL=hermes3:8b
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+      - MATRIX_SECRET_FILE=/secrets/matrix.json
+      - NTFY_URL=${NTFY_URL}
+      - HEALTH_PORT=9098
+      - LOG_LEVEL=info
+      # NEVER put passwords here — read from /secrets/
+
+networks:
+  second-brain:
+    external: true
+    name: second-brain_default

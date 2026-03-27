@@ -3,7 +3,6 @@
 # CI/CD: GitHub Actions builds capture image on push, updates tag automatically
 #
 # Required env vars (set via .env or Portainer):
-#   POSTGRES_PASSWORD  — PostgreSQL admin password
 #   OLLAMA_URL         — Ollama HTTP endpoint for classify + embed
 #   NTFY_URL           — ntfy server URL for notifications
 
@@ -19,11 +18,6 @@ services:
       - /srv/second-brain/init:/docker-entrypoint-initdb.d:ro
       - /srv/second-brain/backups:/backups
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      POSTGRES_DB: second_brain
-      POSTGRES_USER: pai
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      TZ: America/Los_Angeles
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pai -d second_brain"]
       interval: 10s

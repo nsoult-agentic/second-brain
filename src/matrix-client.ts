@@ -18,6 +18,13 @@ export interface MatrixEvent {
 
 type MessageHandler = (event: MatrixEvent) => void | Promise<void>;
 
+// Sender allowlist: if set, only these Matrix user IDs can interact
+const ALLOWED_SENDERS: Set<string> | null = (() => {
+  const raw = process.env["ALLOWED_SENDERS"] ?? "";
+  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length > 0 ? new Set(list) : null;
+})();
+
 // Rate limiter: max messages per sender per window
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60_000;
@@ -143,6 +150,10 @@ async function doSync(): Promise<void> {
       if (ev.type !== "m.room.message") continue;
       if (ev.content.msgtype !== "m.text") continue;
       if (ev.sender === config!.userId) continue; // Ignore own messages
+      if (ALLOWED_SENDERS && !ALLOWED_SENDERS.has(ev.sender)) {
+        log.warn("Blocked unauthorized sender", { sender: ev.sender });
+        continue;
+      }
       if (isDuplicate(ev.event_id)) continue;
       if (isRateLimited(ev.sender)) {
         log.warn("Rate limited", { sender: ev.sender });

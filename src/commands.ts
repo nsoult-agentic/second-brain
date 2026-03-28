@@ -5,7 +5,7 @@ import { embed, type EmbeddingConfig } from "./embedding.js";
 
 const log = createLogger("commands");
 
-const VALID_CATEGORIES = ["person", "project", "idea", "task"] as const;
+const VALID_CATEGORIES = ["person", "project", "idea", "task", "rating", "learning", "research", "work_session", "decision"] as const;
 type Category = (typeof VALID_CATEGORIES)[number];
 const EXPECTED_DIMENSIONS = 768;
 

@@ -232,6 +232,33 @@ export async function startProcessor(config: ProcessorConfig): Promise<void> {
       consecutiveErrorBatches++;
       const backoff = Math.min(POLL_INTERVAL_MS * Math.pow(2, consecutiveErrorBatches), 60_000);
       log.warn("Entire batch failed, backing off", { backoffMs: backoff, consecutiveErrors: consecutiveErrorBatches });
+
+      // Alert on persistent failures — fire once at threshold
+      if (consecutiveErrorBatches === 3) {
+        await notify(config.ntfy, {
+          title: "Brain capture: repeated failures",
+          message: `${consecutiveErrorBatches} consecutive batches failed. Check second-brain-capture logs.`,
+          priority: 4,
+          tags: ["brain", "error"],
+        });
+        try {
+          const sql = getDb();
+          await sql`
+            INSERT INTO items (category, confidence, title, content, metadata, source, status)
+            VALUES (
+              'error', 1.0,
+              'Capture processor: repeated failures',
+              ${`${consecutiveErrorBatches} consecutive batches failed at ${new Date().toISOString()}`},
+              ${JSON.stringify({ module: "capture-processor", consecutiveErrors: consecutiveErrorBatches })}::jsonb,
+              'second-brain-capture',
+              'active'
+            )
+          `;
+        } catch {
+          log.error("Failed to write error item to DB");
+        }
+      }
+
       await Bun.sleep(backoff);
     } else {
       consecutiveErrorBatches = 0;
